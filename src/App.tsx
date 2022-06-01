@@ -28,10 +28,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen bg-gray-900 overflow-hidden">
       <div className=" flex-1 flex justify-center items-center">
-        <div
-          style={{ width: jacketSize, height: jacketSize }}
-          className="p-8 pt-12"
-        >
+        <div style={{ width: jacketSize, height: jacketSize }} className="p-8">
           <div className="h-full bg-gray-800 flex justify-center items-center">
             <IoMusicalNotesSharp
               className="text-gray-500 -translate-x-[5%]"

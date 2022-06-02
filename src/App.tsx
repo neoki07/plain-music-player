@@ -26,7 +26,7 @@ function App() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden">
       <div className=" flex-1 flex justify-center items-center">
         <div style={{ width: jacketSize, height: jacketSize }} className="p-8">
           <div className="h-full bg-gray-800 flex justify-center items-center">

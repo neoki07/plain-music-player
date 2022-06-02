@@ -5,10 +5,21 @@ import {
   IoPlayBackSharp,
   IoMusicalNotesSharp,
 } from "react-icons/io5";
+import { open } from "@tauri-apps/api/dialog";
+import { emit } from "@tauri-apps/api/event";
 
 function App() {
   const divRef = useRef<HTMLDivElement>(null);
   const [jacketSize, setJacketSize] = useState(0);
+
+  function openDialog() {
+    open().then((files) => {
+      if (files && typeof files == "string") {
+        console.log("files", files);
+        emit("front-to-back", files);
+      }
+    });
+  }
 
   useEffect(() => {
     const handleResize = () => {
@@ -33,8 +44,9 @@ function App() {
         <div style={{ width: jacketSize, height: jacketSize }} className="p-8">
           <div className="h-full bg-gray-800 flex justify-center items-center">
             <IoMusicalNotesSharp
-              className="text-gray-500 -translate-x-[5%]"
+              className="text-gray-500 -translate-x-[5%] hover:cursor-grab"
               size="75%"
+              onClick={openDialog}
             />
           </div>
         </div>

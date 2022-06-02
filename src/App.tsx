@@ -20,6 +20,8 @@ function App() {
       setJacketSize(newJacketSize);
     };
 
+    document.body.classList.add("bg-gray-900");
+
     window.addEventListener("resize", handleResize);
     handleResize();
     return () => window.removeEventListener("resize", handleResize);

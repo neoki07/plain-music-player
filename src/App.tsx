@@ -6,7 +6,7 @@ import {
   IoMusicalNotesSharp,
 } from "react-icons/io5";
 import { open } from "@tauri-apps/api/dialog";
-import { emit } from "@tauri-apps/api/event";
+import { invoke } from '@tauri-apps/api/tauri'
 
 function App() {
   const divRef = useRef<HTMLDivElement>(null);
@@ -15,8 +15,8 @@ function App() {
   function openDialog() {
     open().then((files) => {
       if (files && typeof files == "string") {
-        console.log("files", files);
-        emit("front-to-back", files);
+        console.log("files:", files);
+        invoke("play", {path: files});
       }
     });
   }

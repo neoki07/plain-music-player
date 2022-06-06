@@ -12,40 +12,24 @@ use std::thread::sleep;
 use std::time::Duration;
 use tauri::Manager;
 use player::Player;
+use std::sync::Mutex;
+use tauri::State;
+
+struct PlayerState(Mutex<Player>);
+
+#[tauri::command]
+fn play(path: &str, player: State<PlayerState>) -> Result<(), String> {
+    println!("path: {:?}", path);
+    player.0.lock().unwrap().play(Path::new(path));
+    Ok(())
+}
 
 fn main() {
     tauri::Builder::default()
-        .setup(|app| {
-            let id = app.listen_global("front-to-back", |event| {
-                let mut player = Player::new();
-                println!("event.payload: {:?}", event.payload().unwrap());
-                player.play(Path::new(event.payload().unwrap()));
-
-                let mut seconds = 0;
-
-                for i in 0..10 {
-                    println!("{} elapsed: {:?}", i, player.get_progress().unwrap());
-                    sleep(Duration::new(0, 123456789));
-                }
-
-                let _ = player.seek_to(Duration::new(50, 0));
-                println!("\n=============== seek ===============\n");
-
-                for i in 0..10 {
-                    println!("{} elapsed: {:?}", i, player.get_progress().unwrap());
-                    sleep(Duration::new(0, 123456789));
-                }
-
-                let _ = player.seek_to(Duration::new(10, 0));
-                println!("\n=============== seek ===============\n");
-
-                for i in 0..10 {
-                    println!("{} elapsed: {:?}", i, player.get_progress().unwrap());
-                    sleep(Duration::new(0, 123456789));
-                }
-            });
-            Ok(())
-        })
+        .invoke_handler(tauri::generate_handler![
+            play,
+        ])
+        .manage(PlayerState(Mutex::new(Player::new())))
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

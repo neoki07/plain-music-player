@@ -8,9 +8,28 @@ import {
 import { open } from "@tauri-apps/api/dialog";
 import { invoke } from '@tauri-apps/api/tauri'
 
+type Progress = [number, number, number];
+
+function formatTime(time: number) {
+  const min = Math.floor(time / 60);
+  const sec = time % 60;
+  return `${min}:${sec.toString().padStart(2, "0")}`;
+}
+
 function App() {
   const divRef = useRef<HTMLDivElement>(null);
   const [jacketSize, setJacketSize] = useState(0);
+  const [progress, setProgress] = useState<Progress>([0, 0, 0]);
+
+  const requestIdRef = useRef(0);
+  const animate = () => {
+    invoke("get_progress").then((progress) => setProgress(progress as Progress));
+    requestIdRef.current = requestAnimationFrame(animate)
+  };
+  useEffect(() => {
+    requestIdRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestIdRef.current);
+  }, [])
 
   function openDialog() {
     open().then((files) => {
@@ -60,10 +79,20 @@ function App() {
         <div className="break-all mx-8 mb-8 flex text-xl text-gray-500 justify-center text-center">
           Lil Nas X
         </div>
-        <div className="group mx-8 py-2 relative">
-          <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
-          <div className="rounded-full w-[40%] h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto" />
-          <div className="rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 left-[40%] my-auto -translate-x-[50%]" />
+        <div className="mx-8">
+          <div className="group relative w-full py-2">
+            <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
+            <div style={{width: `${progress[0]}%`}} className="rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto" />
+            <div style={{left: `${progress[0]}%`}} className="rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%]" />
+          </div>
+          <div className="flex">
+            <div className="text-gray-500 text-sm">
+              {formatTime(progress[1])}
+            </div>
+            <div className="text-gray-500 text-sm ml-auto">
+              {formatTime(progress[2])}
+            </div>
+          </div>
         </div>
         <div className="p-8 flex justify-center text-center">
           <button className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100">

@@ -14,6 +14,7 @@ use tauri::Manager;
 use player::Player;
 use std::sync::Mutex;
 use tauri::State;
+use anyhow::Result;
 
 struct PlayerState(Mutex<Player>);
 
@@ -24,10 +25,15 @@ fn play(path: &str, player: State<PlayerState>) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn get_progress(player: State<PlayerState>) -> (f64, i64, i64) {
+    player.0.lock().unwrap().get_progress().unwrap()
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            play,
+            play, get_progress
         ])
         .manage(PlayerState(Mutex::new(Player::new())))
         .run(tauri::generate_context!())

@@ -26,6 +26,11 @@ fn play(path: &str, player: State<PlayerState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn seek_to(time: u64, player: State<PlayerState>) {
+    player.0.lock().unwrap().seek_to(Duration::from_secs(time));
+}
+
+#[tauri::command]
 fn get_progress(player: State<PlayerState>) -> (f64, i64, i64) {
     player.0.lock().unwrap().get_progress().unwrap()
 }
@@ -33,7 +38,7 @@ fn get_progress(player: State<PlayerState>) -> (f64, i64, i64) {
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            play, get_progress
+            play, seek_to, get_progress
         ])
         .manage(PlayerState(Mutex::new(Player::new())))
         .run(tauri::generate_context!())

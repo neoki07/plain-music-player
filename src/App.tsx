@@ -80,10 +80,22 @@ function App() {
           Lil Nas X
         </div>
         <div className="mx-8">
-          <div className="group relative w-full py-2">
-            <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
-            <div style={{width: `${progress[0]}%`}} className="rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto" />
-            <div style={{left: `${progress[0]}%`}} className="rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%]" />
+          <div className="group relative w-full ">
+            <div
+                className="py-2 hover:cursor-pointer"
+                onClick={(event) => {
+                  console.log("event:", event);
+                  console.log("event.nativeEvent.offsetX:", event.nativeEvent.offsetX);
+                  console.log("event.currentTarget.offsetWidth:", event.currentTarget.offsetWidth);
+                  const clickedX = event.nativeEvent.offsetX;
+                  const progressBarWidth = event.currentTarget.offsetWidth;
+                  const duration = progress[2];
+                  invoke("seek_to", {time: Math.round(clickedX / progressBarWidth * duration)})
+                }}>
+              <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
+            </div>
+            <div style={{width: `${progress[0]}%`}} className="rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto pointer-events-none" />
+            <div style={{left: `${progress[0]}%`}} className="rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%] pointer-events-none" />
           </div>
           <div className="flex">
             <div className="text-gray-500 text-sm">

@@ -17,8 +17,8 @@ function formatTime(time: number) {
 }
 
 function App() {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [jacketSize, setJacketSize] = useState(0);
+  const divExcludingCoverRef = useRef<HTMLDivElement>(null);
+  const [coverSize, setCoverSize] = useState(0);
   const [progress, setProgress] = useState<Progress>([0, 0, 0]);
 
   const requestIdRef = useRef(0);
@@ -34,7 +34,6 @@ function App() {
   function openDialog() {
     open().then((files) => {
       if (files && typeof files == "string") {
-        console.log("files:", files);
         invoke("play", {path: files});
       }
     });
@@ -42,12 +41,12 @@ function App() {
 
   useEffect(() => {
     const handleResize = () => {
-      const divRefHeight = divRef.current?.offsetHeight ?? 0;
-      const newJacketSize = Math.min(
+      const divExcludingCoverHeight = divExcludingCoverRef.current?.offsetHeight ?? 0;
+      const newCoverSize = Math.min(
         window.innerWidth,
-        window.innerHeight - divRefHeight
+        window.innerHeight - divExcludingCoverHeight
       );
-      setJacketSize(newJacketSize);
+      setCoverSize(newCoverSize);
     };
 
     document.body.classList.add("bg-gray-900");
@@ -60,7 +59,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <div className=" flex-1 flex justify-center items-center">
-        <div style={{ width: jacketSize, height: jacketSize }} className="p-8">
+        <div style={{ width: coverSize, height: coverSize }} className="p-8">
           <div className="h-full bg-gray-800 flex justify-center items-center">
             <IoMusicalNotesSharp
               className="text-gray-500 -translate-x-[5%] hover:cursor-grab"
@@ -70,28 +69,26 @@ function App() {
           </div>
         </div>
       </div>
-      <div ref={divRef}>
-        <div className="flex justify-center text-center">
-          <div className="break-all mx-8 mb-4 font-bold flex text-3xl text-gray-100 justify-center text-center">
+      <div ref={divExcludingCoverRef}>
+        <div className="flex justify-center items-center">
+          <div className="break-all mx-8 mb-4 font-bold flex text-3xl text-gray-100 justify-center items-center">
             MONTERO (Call Me By Your Name)
           </div>
         </div>
-        <div className="break-all mx-8 mb-8 flex text-xl text-gray-500 justify-center text-center">
+        <div className="break-all mx-8 mb-8 flex text-xl text-gray-500 justify-center items-center">
           Lil Nas X
         </div>
         <div className="mx-8">
           <div className="group relative w-full ">
             <div
-                className="py-2 hover:cursor-pointer"
+                className="py-2"
                 onClick={(event) => {
-                  console.log("event:", event);
-                  console.log("event.nativeEvent.offsetX:", event.nativeEvent.offsetX);
-                  console.log("event.currentTarget.offsetWidth:", event.currentTarget.offsetWidth);
                   const clickedX = event.nativeEvent.offsetX;
                   const progressBarWidth = event.currentTarget.offsetWidth;
                   const duration = progress[2];
                   invoke("seek_to", {time: Math.round(clickedX / progressBarWidth * duration)})
-                }}>
+                }}
+            >
               <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
             </div>
             <div style={{width: `${progress[0]}%`}} className="rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto pointer-events-none" />
@@ -106,7 +103,7 @@ function App() {
             </div>
           </div>
         </div>
-        <div className="p-8 flex justify-center text-center">
+        <div className="p-8 flex justify-center items-center">
           <button className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100">
             <IoPlayBackSharp />
           </button>

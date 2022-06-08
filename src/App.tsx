@@ -6,7 +6,7 @@ import {
   IoMusicalNotesSharp,
 } from "react-icons/io5";
 import { open } from "@tauri-apps/api/dialog";
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/tauri';
 
 type Progress = [number, number, number];
 
@@ -18,8 +18,12 @@ function formatTime(time: number) {
 
 function App() {
   const divExcludingCoverRef = useRef<HTMLDivElement>(null);
+  const divProgressBarRef = useRef<HTMLDivElement>(null);
   const [coverSize, setCoverSize] = useState(0);
   const [progress, setProgress] = useState<Progress>([0, 0, 0]);
+  const progressRef = useRef<Progress>(progress);
+  const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
+  const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
 
   const requestIdRef = useRef(0);
   const animate = () => {
@@ -49,12 +53,42 @@ function App() {
       setCoverSize(newCoverSize);
     };
 
+    const handleMouseMove = (event: MouseEvent) => {
+      event.preventDefault();
+
+      if (divProgressBarRef.current && isDraggingProgressBarRef.current) {
+        const mouseX = event.clientX;
+        const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
+        const duration = progressRef.current[2];
+        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
+        invoke("seek_to", { time })
+      }
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      setIsDraggingProgressBar(false)
+    };
+
     document.body.classList.add("bg-gray-900");
 
     window.addEventListener("resize", handleResize);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
     handleResize();
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    }
   }, []);
+
+  useEffect(() => {
+    isDraggingProgressBarRef.current = isDraggingProgressBar
+  }, [isDraggingProgressBar])
+
+  useEffect(() => {
+    progressRef.current = progress
+  }, [progress])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -81,12 +115,15 @@ function App() {
         <div className="mx-8">
           <div className="group relative w-full ">
             <div
+                ref={divProgressBarRef}
                 className="py-2"
-                onClick={(event) => {
-                  const clickedX = event.nativeEvent.offsetX;
-                  const progressBarWidth = event.currentTarget.offsetWidth;
+                onMouseDown={(event) => {
+                  setIsDraggingProgressBar(true);
+                  const mouseX = event.clientX;
+                  const {x: progressBarX, width: progressBarWidth} = event.currentTarget.getBoundingClientRect();
                   const duration = progress[2];
-                  invoke("seek_to", {time: Math.round(clickedX / progressBarWidth * duration)})
+                  const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
+                  invoke("seek_to", { time })
                 }}
             >
               <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />

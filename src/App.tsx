@@ -4,6 +4,7 @@ import {
   IoPlayForwardSharp,
   IoPlayBackSharp,
   IoMusicalNotesSharp,
+  IoPauseSharp
 } from "react-icons/io5";
 import { open } from "@tauri-apps/api/dialog";
 import { invoke } from '@tauri-apps/api/tauri';
@@ -24,10 +25,16 @@ function App() {
   const progressRef = useRef<Progress>(progress);
   const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
+  const [isPaused, setIsPaused] = useState(true);
 
   const requestIdRef = useRef(0);
   const animate = () => {
-    invoke("get_progress").then((progress) => setProgress(progress as Progress));
+    console.log("is_paused b");
+    invoke("is_paused").then((isPaused) => setIsPaused(isPaused as boolean));
+    console.log("is_paused a");
+    if (!isDraggingProgressBarRef.current) {
+      invoke("get_progress").then((progress) => setProgress(progress as Progress));
+    }
     requestIdRef.current = requestAnimationFrame(animate)
   };
   useEffect(() => {
@@ -61,12 +68,20 @@ function App() {
         const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
         const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
-        invoke("seek_to", { time })
+        setProgress([time / duration * 100, time, duration]);
       }
     };
 
     const handleMouseUp = (event: MouseEvent) => {
-      setIsDraggingProgressBar(false)
+      setIsDraggingProgressBar(false);
+
+      if (divProgressBarRef.current && isDraggingProgressBarRef.current) {
+        const mouseX = event.clientX;
+        const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
+        const duration = progressRef.current[2];
+        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
+        invoke("seek_to", { time })
+      }
     };
 
     document.body.classList.add("bg-gray-900");
@@ -119,11 +134,12 @@ function App() {
                 className="py-2"
                 onMouseDown={(event) => {
                   setIsDraggingProgressBar(true);
+
                   const mouseX = event.clientX;
                   const {x: progressBarX, width: progressBarWidth} = event.currentTarget.getBoundingClientRect();
                   const duration = progress[2];
                   const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
-                  invoke("seek_to", { time })
+                  setProgress([time / duration * 100, time, duration]);
                 }}
             >
               <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
@@ -144,8 +160,17 @@ function App() {
           <button className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100">
             <IoPlayBackSharp />
           </button>
-          <button className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100">
-            <IoPlaySharp />
+          <button
+              className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
+              onClick={() => {
+                if (isPaused) {
+                  invoke("resume")
+                } else {
+                  invoke("pause")
+                }
+              }}
+          >
+            {isPaused ? <IoPlaySharp /> : <IoPauseSharp />}
           </button>
           <button className="cursor-default text-4xl text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100">
             <IoPlayForwardSharp />

@@ -32,8 +32,9 @@ function App() {
   const animate = () => {
     invoke("is_paused").then((isPaused) => setIsPaused(isPaused as boolean));
     if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
-      invoke("get_progress").then((progress) => {
-        setProgress(progress as Progress);
+      invoke("get_progress").then((p) => {
+        const progress = p as Progress;
+        setProgress([progress[1] / progress[2] * 100, progress[1], progress[2]]);
       });
     }
     requestIdRef.current = requestAnimationFrame(animate)
@@ -43,10 +44,6 @@ function App() {
     return () => cancelAnimationFrame(requestIdRef.current);
   }, [])
 
-  useEffect(() => {
-    console.log("get progress:", progress);
-  }, [progress])
-
   function openDialog() {
     open().then((files) => {
       if (files && typeof files == "string") {
@@ -54,6 +51,17 @@ function App() {
       }
     });
   }
+
+  const handleMouseDownProgressBar = ((event: React.MouseEvent<HTMLDivElement>) => {
+    setIsDraggingProgressBar(true);
+
+    const mouseX = event.clientX;
+    const {x: progressBarX, width: progressBarWidth} = event.currentTarget.getBoundingClientRect();
+    const duration = progress[2];
+    const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.floor((mouseX - progressBarX) / progressBarWidth * duration);
+    console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
+    setProgress([time / duration * 100, time, duration]);
+  })
 
   useEffect(() => {
     const handleResize = () => {
@@ -72,9 +80,9 @@ function App() {
         const mouseX = event.clientX;
         const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
-        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : (mouseX - progressBarX) / progressBarWidth * duration;
-        console.log("time:", time);
-        setProgress([time / duration * 100, Math.floor(time), duration]);
+        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.floor((mouseX - progressBarX) / progressBarWidth * duration);
+        console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
+        setProgress([time / duration * 100, time, duration]);
       }
     };
 
@@ -85,15 +93,15 @@ function App() {
         const mouseX = event.clientX;
         const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
-        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : (mouseX - progressBarX) / progressBarWidth * duration;
-        console.log("time:", time);
-        setProgress([time / duration * 100, Math.floor(time), duration]);
-        invoke("seek_to", { time: Math.floor(time) })
+        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.floor((mouseX - progressBarX) / progressBarWidth * duration);
+        console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
+        setProgress([time / duration * 100, time, duration]);
+        invoke("seek_to", { time })
         isRightAfterSeekRef.current = true;
 
         setTimeout(() => {
           isRightAfterSeekRef.current = false;
-        }, 50);
+        }, 500);
       }
     };
 
@@ -145,16 +153,7 @@ function App() {
             <div
                 ref={divProgressBarRef}
                 className="py-2"
-                onMouseDown={(event) => {
-                  setIsDraggingProgressBar(true);
-
-                  const mouseX = event.clientX;
-                  const {x: progressBarX, width: progressBarWidth} = event.currentTarget.getBoundingClientRect();
-                  const duration = progress[2];
-                  const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : (mouseX - progressBarX) / progressBarWidth * (duration + 1);
-                  console.log("time:", time);
-                  setProgress([time / duration * 100, Math.floor(time), duration]);
-                }}
+                onMouseDown={handleMouseDownProgressBar}
             >
               <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
             </div>

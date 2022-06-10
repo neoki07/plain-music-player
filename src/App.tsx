@@ -157,8 +157,8 @@ function App() {
             >
               <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
             </div>
-            <div style={{width: `${progress[0]}%`}} className="rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto pointer-events-none" />
-            <div style={{left: `${progress[0]}%`}} className="rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%] pointer-events-none" />
+            <div style={{width: `${progress[0]}%`}} className={`rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto pointer-events-none ${isDraggingProgressBar && "bg-cyan-500"}`} />
+            <div style={{left: `${progress[0]}%`}} className={`rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%] pointer-events-none ${isDraggingProgressBar && "opacity-100"}`} />
           </div>
           <div className="flex">
             <div className="text-gray-500 text-sm">

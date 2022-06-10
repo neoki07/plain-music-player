@@ -26,14 +26,15 @@ function App() {
   const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
   const [isPaused, setIsPaused] = useState(true);
+  const isRightAfterSeekRef = useRef(false);
 
   const requestIdRef = useRef(0);
   const animate = () => {
-    console.log("is_paused b");
     invoke("is_paused").then((isPaused) => setIsPaused(isPaused as boolean));
-    console.log("is_paused a");
-    if (!isDraggingProgressBarRef.current) {
-      invoke("get_progress").then((progress) => setProgress(progress as Progress));
+    if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
+      invoke("get_progress").then((progress) => {
+        setProgress(progress as Progress);
+      });
     }
     requestIdRef.current = requestAnimationFrame(animate)
   };
@@ -41,6 +42,10 @@ function App() {
     requestIdRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestIdRef.current);
   }, [])
+
+  useEffect(() => {
+    console.log("get progress:", progress);
+  }, [progress])
 
   function openDialog() {
     open().then((files) => {
@@ -67,8 +72,9 @@ function App() {
         const mouseX = event.clientX;
         const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
-        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
-        setProgress([time / duration * 100, time, duration]);
+        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : (mouseX - progressBarX) / progressBarWidth * duration;
+        console.log("time:", time);
+        setProgress([time / duration * 100, Math.floor(time), duration]);
       }
     };
 
@@ -79,8 +85,15 @@ function App() {
         const mouseX = event.clientX;
         const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
-        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
-        invoke("seek_to", { time })
+        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : (mouseX - progressBarX) / progressBarWidth * duration;
+        console.log("time:", time);
+        setProgress([time / duration * 100, Math.floor(time), duration]);
+        invoke("seek_to", { time: Math.floor(time) })
+        isRightAfterSeekRef.current = true;
+
+        setTimeout(() => {
+          isRightAfterSeekRef.current = false;
+        }, 50);
       }
     };
 
@@ -120,11 +133,11 @@ function App() {
       </div>
       <div ref={divExcludingCoverRef}>
         <div className="flex justify-center items-center">
-          <div className="break-all mx-8 mb-4 font-bold flex text-3xl text-gray-100 justify-center items-center">
+          <div className="break-all mx-8 font-bold flex text-3xl text-gray-100 justify-center items-center">
             MONTERO (Call Me By Your Name)
           </div>
         </div>
-        <div className="break-all mx-8 mb-8 flex text-xl text-gray-500 justify-center items-center">
+        <div className="break-all mx-8 mb-4 flex text-lg text-gray-500 justify-center items-center">
           Lil Nas X
         </div>
         <div className="mx-8">
@@ -138,8 +151,9 @@ function App() {
                   const mouseX = event.clientX;
                   const {x: progressBarX, width: progressBarWidth} = event.currentTarget.getBoundingClientRect();
                   const duration = progress[2];
-                  const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.round((mouseX - progressBarX) / progressBarWidth * duration);
-                  setProgress([time / duration * 100, time, duration]);
+                  const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : (mouseX - progressBarX) / progressBarWidth * (duration + 1);
+                  console.log("time:", time);
+                  setProgress([time / duration * 100, Math.floor(time), duration]);
                 }}
             >
               <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
@@ -156,7 +170,7 @@ function App() {
             </div>
           </div>
         </div>
-        <div className="p-8 flex justify-center items-center">
+        <div className="p-8 pt-4 flex justify-center items-center">
           <button className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100">
             <IoPlayBackSharp />
           </button>

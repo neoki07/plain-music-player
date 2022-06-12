@@ -97,11 +97,15 @@ function App() {
         console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
         setProgress([time / duration * 100, time, duration]);
         invoke("seek_to", { time })
-        isRightAfterSeekRef.current = true;
 
+        // Since the elapsed time is updated by player every 50ms,
+        // the time before the seek is obtained from player during that time.
+        // Therefore, set the flag to true so that the elapsed time is not got from
+        // the player for a short period of time after the seek.
+        isRightAfterSeekRef.current = true;
         setTimeout(() => {
           isRightAfterSeekRef.current = false;
-        }, 500);
+        }, 100);
       }
     };
 

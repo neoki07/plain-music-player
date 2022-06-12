@@ -159,9 +159,6 @@ impl Sink {
     }
 
     pub fn seek(&self, seek_time: Duration) {
-        if self.is_paused() {
-            self.play();
-        }
         println!("sink seek - seek_time: {:?}", seek_time);
         *self.controls.seek.lock().unwrap() = Some(seek_time);
     }

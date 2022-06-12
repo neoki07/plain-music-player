@@ -178,13 +178,15 @@ impl Source for Symphonia {
     #[inline]
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     fn seek(&mut self, time: Duration) -> Option<Duration> {
-        let nanos_per_sec = 1_000_000_000.0;
         match self.format.seek(
             SeekMode::Coarse,
+            // Symphonia seems to seek about 0.05s before the specified second (not earlier than 0.05s).
+            // Then, at the moment of seek, the time 1 second earlier is displayed on the UI.
+            // To solve this problem, seek to the time that adds 0.05s.
             SeekTo::Time {
                 time: Time::new(
                     time.as_secs(),
-                    f64::from(time.subsec_nanos()) / nanos_per_sec,
+                    0.05,
                 ),
                 track_id: None,
             },
@@ -192,10 +194,10 @@ impl Source for Symphonia {
             Ok(seeked_to) => {
                 let base = TimeBase::new(1, self.sample_rate());
                 let time = base.calc_time(seeked_to.actual_ts);
-
-                Some(Duration::from_millis(
-                    time.seconds * 1000 + ((time.frac * 60. * 1000.).round() as u64),
-                ))
+                let duration = Duration::from_secs(time.seconds)
+                                        + Duration::from_secs_f64(time.frac);
+                self.elapsed = duration;
+                Some(duration)
             }
             Err(_) => None,
         }

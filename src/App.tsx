@@ -4,10 +4,10 @@ import {
   IoPlayForwardSharp,
   IoPlayBackSharp,
   IoMusicalNotesSharp,
-  IoPauseSharp
+  IoPauseSharp,
 } from "react-icons/io5";
 import { open } from "@tauri-apps/api/dialog";
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from "@tauri-apps/api/tauri";
 
 type Progress = [number, number, number];
 
@@ -34,38 +34,62 @@ function App() {
     if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
       invoke("get_progress").then((p) => {
         const progress = p as Progress;
-        setProgress([progress[1] / progress[2] * 100, progress[1], progress[2]]);
+        setProgress([
+          (progress[1] / progress[2]) * 100,
+          progress[1],
+          progress[2],
+        ]);
       });
     }
-    requestIdRef.current = requestAnimationFrame(animate)
+    requestIdRef.current = requestAnimationFrame(animate);
   };
   useEffect(() => {
     requestIdRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestIdRef.current);
-  }, [])
+  }, []);
 
   function openDialog() {
     open().then((files) => {
       if (files && typeof files == "string") {
-        invoke("play", {path: files});
+        invoke("play", { path: files });
       }
     });
   }
 
-  const handleMouseDownProgressBar = ((event: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseDownProgressBar = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
     setIsDraggingProgressBar(true);
 
     const mouseX = event.clientX;
-    const {x: progressBarX, width: progressBarWidth} = event.currentTarget.getBoundingClientRect();
+    const { x: progressBarX, width: progressBarWidth } =
+      event.currentTarget.getBoundingClientRect();
     const duration = progress[2];
-    const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.floor((mouseX - progressBarX) / progressBarWidth * duration);
-    console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
-    setProgress([time / duration * 100, time, duration]);
-  })
+    const time =
+      mouseX <= progressBarX
+        ? 0
+        : mouseX >= progressBarX + progressBarWidth
+        ? duration
+        : Math.floor(((mouseX - progressBarX) / progressBarWidth) * duration);
+    console.log(
+      "mx:",
+      mouseX,
+      "pbx:",
+      progressBarX,
+      "pbw:",
+      progressBarWidth,
+      "time:",
+      time,
+      "per:",
+      [(time / duration) * 100]
+    );
+    setProgress([(time / duration) * 100, time, duration]);
+  };
 
   useEffect(() => {
     const handleResize = () => {
-      const divExcludingCoverHeight = divExcludingCoverRef.current?.offsetHeight ?? 0;
+      const divExcludingCoverHeight =
+        divExcludingCoverRef.current?.offsetHeight ?? 0;
       const newCoverSize = Math.min(
         window.innerWidth,
         window.innerHeight - divExcludingCoverHeight
@@ -78,11 +102,30 @@ function App() {
 
       if (divProgressBarRef.current && isDraggingProgressBarRef.current) {
         const mouseX = event.clientX;
-        const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
+        const { x: progressBarX, width: progressBarWidth } =
+          divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
-        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.floor((mouseX - progressBarX) / progressBarWidth * duration);
-        console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
-        setProgress([time / duration * 100, time, duration]);
+        const time =
+          mouseX <= progressBarX
+            ? 0
+            : mouseX >= progressBarX + progressBarWidth
+            ? duration
+            : Math.floor(
+                ((mouseX - progressBarX) / progressBarWidth) * duration
+              );
+        console.log(
+          "mx:",
+          mouseX,
+          "pbx:",
+          progressBarX,
+          "pbw:",
+          progressBarWidth,
+          "time:",
+          time,
+          "per:",
+          [(time / duration) * 100]
+        );
+        setProgress([(time / duration) * 100, time, duration]);
       }
     };
 
@@ -91,12 +134,31 @@ function App() {
 
       if (divProgressBarRef.current && isDraggingProgressBarRef.current) {
         const mouseX = event.clientX;
-        const {x: progressBarX, width: progressBarWidth} = divProgressBarRef.current.getBoundingClientRect();
+        const { x: progressBarX, width: progressBarWidth } =
+          divProgressBarRef.current.getBoundingClientRect();
         const duration = progressRef.current[2];
-        const time = mouseX <= progressBarX ? 0 : mouseX >= progressBarX + progressBarWidth ? duration : Math.floor((mouseX - progressBarX) / progressBarWidth * duration);
-        console.log("mx:", mouseX, "pbx:", progressBarX, "pbw:", progressBarWidth, "time:", time, "per:", [time / duration * 100]);
-        setProgress([time / duration * 100, time, duration]);
-        invoke("seek_to", { time })
+        const time =
+          mouseX <= progressBarX
+            ? 0
+            : mouseX >= progressBarX + progressBarWidth
+            ? duration
+            : Math.floor(
+                ((mouseX - progressBarX) / progressBarWidth) * duration
+              );
+        console.log(
+          "mx:",
+          mouseX,
+          "pbx:",
+          progressBarX,
+          "pbw:",
+          progressBarWidth,
+          "time:",
+          time,
+          "per:",
+          [(time / duration) * 100]
+        );
+        setProgress([(time / duration) * 100, time, duration]);
+        invoke("seek_to", { time });
 
         // Since the elapsed time is updated by player every 50ms,
         // the time before the seek is obtained from player during that time.
@@ -119,23 +181,26 @@ function App() {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
-    }
+    };
   }, []);
 
   useEffect(() => {
-    isDraggingProgressBarRef.current = isDraggingProgressBar
-  }, [isDraggingProgressBar])
+    isDraggingProgressBarRef.current = isDraggingProgressBar;
+  }, [isDraggingProgressBar]);
 
   useEffect(() => {
-    progressRef.current = progress
-  }, [progress])
+    progressRef.current = progress;
+  }, [progress]);
 
   return (
     <div className="relative">
       <div data-tauri-drag-region className="absolute w-full h-7" />
       <div className="flex flex-col h-screen overflow-hidden">
         <div className=" flex-1 flex justify-center items-center">
-          <div style={{ width: coverSize, height: coverSize }} className="p-8 mt-2">
+          <div
+            style={{ width: coverSize, height: coverSize }}
+            className="p-8 mt-2"
+          >
             <div className="h-full bg-gray-800 flex justify-center items-center">
               <IoMusicalNotesSharp
                 className="text-gray-500 -translate-x-[5%] hover:cursor-grab"
@@ -157,14 +222,24 @@ function App() {
           <div className="mx-8">
             <div className="group relative w-full ">
               <div
-                  ref={divProgressBarRef}
-                  className="py-2"
-                  onMouseDown={handleMouseDownProgressBar}
+                ref={divProgressBarRef}
+                className="py-2"
+                onMouseDown={handleMouseDownProgressBar}
               >
                 <div className="rounded-full w-full h-1 bg-gray-500 absolute top-0 bottom-0 left-0 right-0 m-auto" />
               </div>
-              <div style={{width: `${progress[0]}%`}} className={`rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto pointer-events-none ${isDraggingProgressBar && "bg-cyan-500"}`} />
-              <div style={{left: `${progress[0]}%`}} className={`rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%] pointer-events-none ${isDraggingProgressBar && "opacity-100"}`} />
+              <div
+                style={{ width: `${progress[0]}%` }}
+                className={`rounded-full h-1 bg-gray-300 group-hover:bg-cyan-500 absolute top-0 bottom-0 left-0 my-auto pointer-events-none ${
+                  isDraggingProgressBar && "bg-cyan-500"
+                }`}
+              />
+              <div
+                style={{ left: `${progress[0]}%` }}
+                className={`rounded-full w-4 h-4 bg-gray-300 opacity-0 group-hover:opacity-100 absolute top-0 bottom-0 my-auto -translate-x-[50%] pointer-events-none ${
+                  isDraggingProgressBar && "opacity-100"
+                }`}
+              />
             </div>
             <div className="flex">
               <div className="text-gray-500 text-sm">
@@ -180,14 +255,14 @@ function App() {
               <IoPlayBackSharp />
             </button>
             <button
-                className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
-                onClick={() => {
-                  if (isPaused) {
-                    invoke("resume")
-                  } else {
-                    invoke("pause")
-                  }
-                }}
+              className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
+              onClick={() => {
+                if (isPaused) {
+                  invoke("resume");
+                } else {
+                  invoke("pause");
+                }
+              }}
             >
               {isPaused ? <IoPlaySharp /> : <IoPauseSharp />}
             </button>

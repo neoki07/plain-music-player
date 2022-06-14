@@ -5,17 +5,17 @@
 
 mod player;
 
+use anyhow::Result;
+use cocoa::appkit::{NSWindow, NSWindowStyleMask, NSWindowTitleVisibility};
+use player::Player;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::Duration;
-use tauri::{Manager, Runtime, Window};
-use player::Player;
-use std::sync::Mutex;
 use tauri::State;
-use anyhow::Result;
-use cocoa::appkit::{NSWindow, NSWindowStyleMask, NSWindowTitleVisibility};
+use tauri::{Manager, Runtime, Window};
 
 struct PlayerState(Mutex<Player>);
 
@@ -101,7 +101,12 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            play, pause, resume, is_paused, seek_to, get_progress
+            play,
+            pause,
+            resume,
+            is_paused,
+            seek_to,
+            get_progress
         ])
         .manage(PlayerState(Mutex::new(Player::new())))
         .run(tauri::generate_context!())

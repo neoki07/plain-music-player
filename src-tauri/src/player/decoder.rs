@@ -184,18 +184,15 @@ impl Source for Symphonia {
             // Then, at the moment of seek, the time 1 second earlier is displayed on the UI.
             // To solve this problem, seek to the time that adds 0.05s.
             SeekTo::Time {
-                time: Time::new(
-                    time.as_secs(),
-                    0.05,
-                ),
+                time: Time::new(time.as_secs(), 0.05),
                 track_id: None,
             },
         ) {
             Ok(seeked_to) => {
                 let base = TimeBase::new(1, self.sample_rate());
                 let time = base.calc_time(seeked_to.actual_ts);
-                let duration = Duration::from_secs(time.seconds)
-                                        + Duration::from_secs_f64(time.frac);
+                let duration =
+                    Duration::from_secs(time.seconds) + Duration::from_secs_f64(time.frac);
                 self.elapsed = duration;
                 Some(duration)
             }

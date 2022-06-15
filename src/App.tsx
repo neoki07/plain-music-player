@@ -34,25 +34,51 @@ function App() {
   const [isPaused, setIsPaused] = useState(true);
   const isRightAfterSeekRef = useRef(false);
   const [playlistItems, setPlaylistItems] = useState<Track[]>([]);
-  const [currentSong, setCurrentSong] = useState<Track>();
-  const [status, setStatus] = useState<Status>("Stopped");
+  const playlistItemsRef = useRef<Track[]>(playlistItems);
+  const [currentSongIndex, setCurrentSongIndex] = useState<number>(0);
+  const currentSongIndexRef = useRef(currentSongIndex);
+  const statusRef = useRef<Status>("Stopped");
 
   const requestIdRef = useRef(0);
 
+  useEffect(() => {
+    playlistItemsRef.current = playlistItems;
+  }, [playlistItems]);
+
+  useEffect(() => {
+    currentSongIndexRef.current = currentSongIndex;
+  }, [currentSongIndex]);
+
   const playerNext = () => {
-    if (!playlistItems.length) {
-      setCurrentSong(undefined);
+    if (!playlistItemsRef.current.length) {
+      setCurrentSongIndex(0);
       invoke("stop");
       return;
     }
 
-    setStatus("Running");
-    const song = playlistItems.shift();
-    if (song) {
+    statusRef.current = "Running";
+    if (currentSongIndexRef.current !== undefined) {
+      const newCurrentSongIndex =
+        currentSongIndexRef.current < playlistItemsRef.current.length - 1
+          ? currentSongIndexRef.current + 1
+          : 0;
+
+      const song = playlistItemsRef.current[newCurrentSongIndex];
       invoke("play", { path: song.file });
-      setPlaylistItems((playlistItems) => [...playlistItems, { ...song }]);
-      setCurrentSong(song);
+      setCurrentSongIndex(newCurrentSongIndex);
     }
+  };
+
+  const playerTogglePause = () => {
+    invoke("is_paused").then((isPaused) => {
+      if (isPaused) {
+        statusRef.current = "Running";
+        invoke("resume");
+      } else {
+        statusRef.current = "Paused";
+        invoke("pause");
+      }
+    });
   };
 
   const progressUpdate = () => {
@@ -69,11 +95,14 @@ function App() {
   };
 
   const animate = () => {
-    invoke("is_paused").then((isPaused) => setIsPaused(isPaused as boolean));
     if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
-      console.log("progress updating");
       progressUpdate();
     }
+
+    if (statusRef.current === "Stopped") {
+      playerNext();
+    }
+
     requestIdRef.current = requestAnimationFrame(animate);
   };
   useEffect(() => {
@@ -84,14 +113,17 @@ function App() {
   function openDialog() {
     open().then((files) => {
       if (files) {
+        // TODO: files type check
         if (typeof files == "string") {
           const newSong = { file: files };
-          setPlaylistItems((playlistItems) => [...playlistItems, newSong]);
+          const newPlaylistItems = [...playlistItems, newSong];
+          setPlaylistItems(newPlaylistItems);
         } else {
           const newSongs = files.map((file) => {
             return { file };
           });
-          setPlaylistItems((playlistItems) => [...playlistItems, ...newSongs]);
+          const newPlaylistItems = [...playlistItems, ...newSongs];
+          setPlaylistItems(newPlaylistItems);
         }
       }
     });
@@ -297,15 +329,13 @@ function App() {
             </button>
             <button
               className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
-              onClick={() => {
-                if (isPaused) {
-                  invoke("resume");
-                } else {
-                  invoke("pause");
-                }
-              }}
+              onClick={playerTogglePause}
             >
-              {isPaused ? <IoPlaySharp /> : <IoPauseSharp />}
+              {statusRef.current === "Running" ? (
+                <IoPauseSharp />
+              ) : (
+                <IoPlaySharp />
+              )}
             </button>
             <button className="cursor-default text-4xl text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100">
               <IoPlayForwardSharp />

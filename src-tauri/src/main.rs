@@ -84,6 +84,11 @@ fn is_paused(player: State<PlayerState>) -> bool {
 }
 
 #[tauri::command]
+fn stop(player: State<PlayerState>) {
+    player.0.lock().unwrap().stop();
+}
+
+#[tauri::command]
 fn seek_to(time: u64, player: State<PlayerState>) {
     player.0.lock().unwrap().seek_to(Duration::from_secs(time));
 }
@@ -105,6 +110,7 @@ fn main() {
             pause,
             resume,
             is_paused,
+            stop,
             seek_to,
             get_progress
         ])

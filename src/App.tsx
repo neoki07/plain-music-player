@@ -11,6 +11,12 @@ import { invoke } from "@tauri-apps/api/tauri";
 
 type Progress = [number, number, number];
 
+type Status = "Running" | "Stopped" | "Paused";
+
+type Track = {
+  file: string;
+};
+
 function formatTime(time: number) {
   const min = Math.floor(time / 60);
   const sec = time % 60;
@@ -27,19 +33,46 @@ function App() {
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
   const [isPaused, setIsPaused] = useState(true);
   const isRightAfterSeekRef = useRef(false);
+  const [playlistItems, setPlaylistItems] = useState<Track[]>([]);
+  const [currentSong, setCurrentSong] = useState<Track>();
+  const [status, setStatus] = useState<Status>("Stopped");
 
   const requestIdRef = useRef(0);
+
+  const playerNext = () => {
+    if (!playlistItems.length) {
+      setCurrentSong(undefined);
+      invoke("stop");
+      return;
+    }
+
+    setStatus("Running");
+    const song = playlistItems.shift();
+    if (song) {
+      invoke("play", { path: song.file });
+      setPlaylistItems((playlistItems) => [...playlistItems, { ...song }]);
+      setCurrentSong(song);
+    }
+  };
+
+  const progressUpdate = () => {
+    invoke("get_progress").then((progress) => {
+      const [_, timePos, duration] = progress as Progress;
+
+      if (timePos >= duration) {
+        playerNext();
+        return;
+      }
+
+      setProgress([(timePos / duration) * 100, timePos, duration]);
+    });
+  };
+
   const animate = () => {
     invoke("is_paused").then((isPaused) => setIsPaused(isPaused as boolean));
     if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
-      invoke("get_progress").then((p) => {
-        const progress = p as Progress;
-        setProgress([
-          (progress[1] / progress[2]) * 100,
-          progress[1],
-          progress[2],
-        ]);
-      });
+      console.log("progress updating");
+      progressUpdate();
     }
     requestIdRef.current = requestAnimationFrame(animate);
   };
@@ -50,8 +83,16 @@ function App() {
 
   function openDialog() {
     open().then((files) => {
-      if (files && typeof files == "string") {
-        invoke("play", { path: files });
+      if (files) {
+        if (typeof files == "string") {
+          const newSong = { file: files };
+          setPlaylistItems((playlistItems) => [...playlistItems, newSong]);
+        } else {
+          const newSongs = files.map((file) => {
+            return { file };
+          });
+          setPlaylistItems((playlistItems) => [...playlistItems, ...newSongs]);
+        }
       }
     });
   }

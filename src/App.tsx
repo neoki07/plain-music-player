@@ -57,16 +57,35 @@ function App() {
     }
 
     statusRef.current = "Running";
-    if (currentSongIndexRef.current !== undefined) {
-      const newCurrentSongIndex =
-        currentSongIndexRef.current < playlistItemsRef.current.length - 1
-          ? currentSongIndexRef.current + 1
-          : 0;
+    const newCurrentSongIndex =
+      currentSongIndexRef.current < playlistItemsRef.current.length - 1
+        ? currentSongIndexRef.current + 1
+        : 0;
 
-      const song = playlistItemsRef.current[newCurrentSongIndex];
-      invoke("play", { path: song.file });
-      setCurrentSongIndex(newCurrentSongIndex);
+    const song = playlistItemsRef.current[newCurrentSongIndex];
+    invoke("play", { path: song.file });
+    setCurrentSongIndex(newCurrentSongIndex);
+  };
+
+  const playerPrevious = () => {
+    if (!playlistItemsRef.current.length) {
+      setCurrentSongIndex(0);
+      invoke("stop");
+      return;
     }
+
+    statusRef.current = "Running";
+    console.log("elapsed:", progressRef.current[1]);
+    const newCurrentSongIndex =
+      progressRef.current[1] >= 3
+        ? currentSongIndexRef.current
+        : currentSongIndexRef.current > 0
+        ? currentSongIndexRef.current - 1
+        : playlistItemsRef.current.length - 1;
+
+    const song = playlistItemsRef.current[newCurrentSongIndex];
+    invoke("play", { path: song.file });
+    setCurrentSongIndex(newCurrentSongIndex);
   };
 
   const playerTogglePause = () => {
@@ -324,7 +343,10 @@ function App() {
             </div>
           </div>
           <div className="p-8 pt-4 flex justify-center items-center">
-            <button className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100">
+            <button
+              className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100"
+              onClick={playerPrevious}
+            >
               <IoPlayBackSharp />
             </button>
             <button
@@ -337,7 +359,10 @@ function App() {
                 <IoPlaySharp />
               )}
             </button>
-            <button className="cursor-default text-4xl text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100">
+            <button
+              className="cursor-default text-4xl text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
+              onClick={playerNext}
+            >
               <IoPlayForwardSharp />
             </button>
           </div>

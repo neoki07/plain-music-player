@@ -94,15 +94,17 @@ function App() {
   };
 
   const playerTogglePause = () => {
-    invoke("is_paused").then((isPaused) => {
-      if (isPaused) {
-        setStatus("Running");
-        invoke("resume");
-      } else {
-        setStatus("Paused");
-        invoke("pause");
-      }
-    });
+    if (playlistItemsRef.current.length) {
+      invoke("is_paused").then((isPaused) => {
+        if (isPaused) {
+          setStatus("Running");
+          invoke("resume");
+        } else {
+          setStatus("Paused");
+          invoke("pause");
+        }
+      });
+    }
   };
 
   const progressUpdate = () => {
@@ -349,20 +351,23 @@ function App() {
           </div>
           <div className="p-8 pt-4 flex justify-center items-center">
             <button
-              className="cursor-default text-4xl text-gray-300 hover:text-gray-50 hover:scale-105 active:text-gray-300 active:scale-100"
+              className="cursor-default text-4xl text-gray-300 enabled:hover:text-gray-50 enabled:hover:scale-105 active:text-gray-300 active:scale-100 disabled:text-gray-800"
               onClick={playerPrevious}
+              disabled={status === "Stopped"}
             >
               <IoPlayBackSharp />
             </button>
             <button
-              className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
+              className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 enabled:hover:text-white enabled:hover:scale-105 active:text-gray-300 active:scale-100 disabled:text-gray-800"
               onClick={playerTogglePause}
+              disabled={status === "Stopped"}
             >
               {status === "Running" ? <IoPauseSharp /> : <IoPlaySharp />}
             </button>
             <button
-              className="cursor-default text-4xl text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
+              className="cursor-default text-4xl text-gray-300 enabled:hover:text-white enabled:hover:scale-105 active:text-gray-300 active:scale-100 disabled:text-gray-800"
               onClick={playerNext}
+              disabled={status === "Stopped"}
             >
               <IoPlayForwardSharp />
             </button>

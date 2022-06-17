@@ -171,6 +171,13 @@ impl Sink {
         self.controls.pause.load(Ordering::SeqCst)
     }
 
+    /// Gets if a sink is stopped
+    ///
+    /// This returns `true` if the sink is stopped.
+    pub fn is_stopped(&self) -> bool {
+        self.controls.stopped.load(Ordering::SeqCst)
+    }
+
     /// Destroys the sink without stopping the sounds that are still playing.
     #[inline]
     pub fn detach(mut self) {

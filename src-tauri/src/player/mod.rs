@@ -18,15 +18,14 @@ pub use cpal::{
 pub use decoder::Symphonia;
 pub use sink::Sink;
 pub use source::Source;
+use std::fmt;
 pub use stream::{OutputStream, OutputStreamHandle, PlayError, StreamError};
 
 use std::fs::File;
 use std::path::Path;
 use std::time::Duration;
 
-// use super::GeneralP;
-// use crate::config::Termusic;
-use anyhow::Result;
+use serde::Serialize;
 
 static VOLUME_STEP: u16 = 5;
 static SEEK_STEP: f64 = 5.0;
@@ -36,6 +35,7 @@ pub struct Player {
     handle: OutputStreamHandle,
     sink: Sink,
     total_duration: Option<Duration>,
+    is_stopped: bool,
     pub volume: u16,
     pub speed: f32,
     pub gapless: bool,
@@ -58,6 +58,7 @@ impl Player {
             handle,
             sink,
             total_duration: None,
+            is_stopped: true,
             volume,
             speed,
             gapless,
@@ -70,6 +71,7 @@ impl Player {
                 self.total_duration = decoder.total_duration();
                 self.sink.append(decoder);
                 self.sink.set_speed(self.speed);
+                self.is_stopped = false;
             }
         }
     }
@@ -89,6 +91,7 @@ impl Player {
     pub fn stop(&mut self) {
         self.sink = Sink::try_new(&self.handle, self.gapless).unwrap();
         self.sink.set_volume(f32::from(self.volume) / 100.0);
+        self.is_stopped = true;
     }
     pub fn elapsed(&self) -> Duration {
         self.sink.elapsed()
@@ -128,9 +131,13 @@ impl Player {
         self.sink.set_speed(speed);
     }
 
-    pub fn get_progress(&mut self) -> Result<(f64, i64, i64)> {
+    pub fn get_progress(&mut self) -> Result<(f64, i64, i64), PlayerError> {
+        if self.is_stopped {
+            return Err(PlayerError::StoppedError);
+        }
+
         let position = self.elapsed().as_secs() as i64;
-        let duration = self.duration().unwrap_or(99.0) as i64;
+        let duration = self.duration().unwrap() as i64;
         let mut percent = self.percentage() * 100.0;
         if percent > 100.0 {
             percent = 100.0;
@@ -139,100 +146,7 @@ impl Player {
     }
 }
 
-// impl GeneralP for Player {
-//     fn add_and_play(&mut self, song: &str) {
-//         let p = Path::new(song);
-//         self.play(p);
-//     }
-//
-//     fn volume(&self) -> i32 {
-//         self.volume.into()
-//     }
-//
-//     fn volume_up(&mut self) {
-//         let volume = i32::from(self.volume) + i32::from(VOLUME_STEP);
-//         self.set_volume(volume);
-//     }
-//
-//     fn volume_down(&mut self) {
-//         let volume = i32::from(self.volume) - i32::from(VOLUME_STEP);
-//         self.set_volume(volume);
-//     }
-//
-//     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-//     fn set_volume(&mut self, mut volume: i32) {
-//         if volume > 100 {
-//             volume = 100;
-//         } else if volume < 0 {
-//             volume = 0;
-//         }
-//         self.volume = volume as u16;
-//         self.sink.set_volume(f32::from(self.volume) / 100.0);
-//     }
-//
-//     fn pause(&mut self) {
-//         self.sink.pause();
-//     }
-//
-//     fn resume(&mut self) {
-//         self.sink.play();
-//     }
-//
-//     fn is_paused(&self) -> bool {
-//         self.sink.is_paused()
-//     }
-//
-//     fn seek(&mut self, secs: i64) -> Result<()> {
-//         if secs.is_positive() {
-//             self.seek_fw();
-//             return Ok(());
-//         }
-//
-//         self.seek_bw();
-//         Ok(())
-//     }
-//
-//     #[allow(
-//         clippy::cast_possible_wrap,
-//         clippy::cast_precision_loss,
-//         clippy::cast_possible_truncation
-//     )]
-//     fn get_progress(&mut self) -> Result<(f64, i64, i64)> {
-//         let position = self.elapsed().as_secs() as i64;
-//         let duration = self.duration().unwrap_or(99.0) as i64;
-//         let mut percent = self.percentage() * 100.0;
-//         if percent > 100.0 {
-//             percent = 100.0;
-//         }
-//         println!("  self.elapsed(): {:?}", self.elapsed());
-//         Ok((percent, position, duration))
-//     }
-//
-//     fn speed_up(&mut self) {
-//         let mut speed = self.speed + 0.1;
-//         if speed > 3.0 {
-//             speed = 3.0;
-//         }
-//         self.set_speed(speed);
-//     }
-//
-//     fn speed_down(&mut self) {
-//         let mut speed = self.speed - 0.1;
-//         if speed < 0.1 {
-//             speed = 0.1;
-//         }
-//         self.set_speed(speed);
-//     }
-//
-//     fn set_speed(&mut self, speed: f32) {
-//         self.speed = speed;
-//         self.set_speed(speed);
-//     }
-//
-//     fn speed(&self) -> f32 {
-//         self.speed
-//     }
-//     fn stop(&mut self) {
-//         self.stop();
-//     }
-// }
+#[derive(Debug, Serialize)]
+pub enum PlayerError {
+    StoppedError,
+}

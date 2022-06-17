@@ -5,6 +5,7 @@
 
 mod player;
 
+use crate::player::PlayerError;
 use anyhow::Result;
 use cocoa::appkit::{NSWindow, NSWindowStyleMask, NSWindowTitleVisibility};
 use player::Player;
@@ -94,8 +95,8 @@ fn seek_to(time: u64, player: State<PlayerState>) {
 }
 
 #[tauri::command]
-fn get_progress(player: State<PlayerState>) -> (f64, i64, i64) {
-    player.0.lock().unwrap().get_progress().unwrap()
+fn get_progress(player: State<PlayerState>) -> Result<(f64, i64, i64), PlayerError> {
+    player.0.lock().unwrap().get_progress()
 }
 
 fn main() {

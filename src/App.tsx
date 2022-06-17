@@ -37,7 +37,8 @@ function App() {
   const playlistItemsRef = useRef<Track[]>(playlistItems);
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(0);
   const currentSongIndexRef = useRef(currentSongIndex);
-  const statusRef = useRef<Status>("Stopped");
+  const [status, setStatus] = useState<Status>("Stopped");
+  const statusRef = useRef<Status>(status);
 
   const requestIdRef = useRef(0);
 
@@ -49,6 +50,10 @@ function App() {
     currentSongIndexRef.current = currentSongIndex;
   }, [currentSongIndex]);
 
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   const playerNext = () => {
     if (!playlistItemsRef.current.length) {
       setCurrentSongIndex(0);
@@ -56,7 +61,7 @@ function App() {
       return;
     }
 
-    statusRef.current = "Running";
+    setStatus("Running");
     const newCurrentSongIndex =
       currentSongIndexRef.current < playlistItemsRef.current.length - 1
         ? currentSongIndexRef.current + 1
@@ -74,7 +79,7 @@ function App() {
       return;
     }
 
-    statusRef.current = "Running";
+    setStatus("Running");
     console.log("elapsed:", progressRef.current[1]);
     const newCurrentSongIndex =
       progressRef.current[1] >= 3
@@ -91,10 +96,10 @@ function App() {
   const playerTogglePause = () => {
     invoke("is_paused").then((isPaused) => {
       if (isPaused) {
-        statusRef.current = "Running";
+        setStatus("Running");
         invoke("resume");
       } else {
-        statusRef.current = "Paused";
+        setStatus("Paused");
         invoke("pause");
       }
     });
@@ -353,11 +358,7 @@ function App() {
               className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"
               onClick={playerTogglePause}
             >
-              {statusRef.current === "Running" ? (
-                <IoPauseSharp />
-              ) : (
-                <IoPlaySharp />
-              )}
+              {status === "Running" ? <IoPauseSharp /> : <IoPlaySharp />}
             </button>
             <button
               className="cursor-default text-4xl text-gray-300 hover:text-white hover:scale-105 active:text-gray-300 active:scale-100"

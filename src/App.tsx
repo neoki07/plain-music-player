@@ -30,7 +30,8 @@ const App = () => {
   const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
   const isRightAfterSeekRef = useRef(false);
-  const isEndOfSong = useRef(false);
+  const [isEndOfSong, setIsEndOfSong] = useState(false);
+  const isEndOfSongRef = useRef(isEndOfSong);
   const [playlistItems, setPlaylistItems] = useState<Track[]>([]);
   const playlistItemsRef = useRef<Track[]>(playlistItems);
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(0);
@@ -73,6 +74,10 @@ const App = () => {
   useEffect(() => {
     currentSongIndexRef.current = currentSongIndex;
   }, [currentSongIndex]);
+
+  useEffect(() => {
+    isEndOfSongRef.current = isEndOfSong;
+  }, [isEndOfSong]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -140,7 +145,7 @@ const App = () => {
               );
 
         seekTo(time);
-        if (isEndOfSong.current && statusRef.current !== "Running") {
+        if (isEndOfSongRef.current && statusRef.current !== "Running") {
           resume();
         }
         setProgress([(time / duration) * 100, time, duration]);
@@ -206,7 +211,7 @@ const App = () => {
   };
 
   const playerTogglePause = () => {
-    if (playlistItemsRef.current.length) {
+    if (playlistItemsRef.current.length && !isEndOfSongRef.current) {
       getIsPaused().then((isPaused) => (isPaused ? resume() : pause()));
     }
   };
@@ -218,11 +223,11 @@ const App = () => {
 
         if (timePos >= duration) {
           pause();
-          isEndOfSong.current = true;
+          setIsEndOfSong(true);
           setProgress([(timePos / duration) * 100, timePos, duration]);
           // playerNext();
         } else {
-          isEndOfSong.current = false;
+          setIsEndOfSong(false);
           setProgress([(timePos / duration) * 100, timePos, duration]);
         }
       })
@@ -347,7 +352,7 @@ const App = () => {
             <button
               className="mx-16 text-5xl translate-x-1 cursor-default text-gray-300 enabled:hover:text-white enabled:hover:scale-105 active:text-gray-300 active:scale-100 disabled:text-gray-800"
               onClick={playerTogglePause}
-              disabled={status === "Stopped"}
+              disabled={status === "Stopped" || isEndOfSong}
             >
               {status === "Running" ? <IoPauseSharp /> : <IoPlaySharp />}
             </button>

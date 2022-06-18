@@ -29,6 +29,7 @@ function App() {
   const [coverSize, setCoverSize] = useState(0);
   const [progress, setProgress] = useState<Progress>([0, 0, 0]);
   const progressRef = useRef<Progress>(progress);
+  const prevProgressRef = useRef<Progress>(progress);
   const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
   const [isPaused, setIsPaused] = useState(true);
@@ -112,7 +113,10 @@ function App() {
       const [_, timePos, duration] = progress as Progress;
 
       if (timePos >= duration) {
-        playerNext();
+        setStatus("Paused");
+        invoke("pause");
+        setProgress([(timePos / duration) * 100, timePos, duration]);
+        // playerNext();
         return;
       }
 
@@ -256,8 +260,13 @@ function App() {
           "per:",
           [(time / duration) * 100]
         );
-        setProgress([(time / duration) * 100, time, duration]);
+
         invoke("seek_to", { time });
+        if (prevProgressRef.current[1] >= prevProgressRef.current[2]) {
+          setStatus("Running");
+          invoke("resume");
+        }
+        setProgress([(time / duration) * 100, time, duration]);
 
         // Since the elapsed time is updated by player every 50ms,
         // the time before the seek is obtained from player during that time.
@@ -288,6 +297,7 @@ function App() {
   }, [isDraggingProgressBar]);
 
   useEffect(() => {
+    prevProgressRef.current = progressRef.current;
     progressRef.current = progress;
   }, [progress]);
 

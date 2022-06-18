@@ -29,11 +29,11 @@ function App() {
   const [coverSize, setCoverSize] = useState(0);
   const [progress, setProgress] = useState<Progress>([0, 0, 0]);
   const progressRef = useRef<Progress>(progress);
-  const prevProgressRef = useRef<Progress>(progress);
   const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
   const [isPaused, setIsPaused] = useState(true);
   const isRightAfterSeekRef = useRef(false);
+  const isEndOfSong = useRef(false);
   const [playlistItems, setPlaylistItems] = useState<Track[]>([]);
   const playlistItemsRef = useRef<Track[]>(playlistItems);
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(0);
@@ -81,7 +81,6 @@ function App() {
     }
 
     setStatus("Running");
-    console.log("elapsed:", progressRef.current[1]);
     const newCurrentSongIndex =
       progressRef.current[1] >= 3
         ? currentSongIndexRef.current
@@ -113,11 +112,14 @@ function App() {
       const [_, timePos, duration] = progress as Progress;
 
       if (timePos >= duration) {
+        isEndOfSong.current = true;
         setStatus("Paused");
         invoke("pause");
         setProgress([(timePos / duration) * 100, timePos, duration]);
         // playerNext();
         return;
+      } else {
+        isEndOfSong.current = false;
       }
 
       setProgress([(timePos / duration) * 100, timePos, duration]);
@@ -174,18 +176,6 @@ function App() {
         : mouseX >= progressBarX + progressBarWidth
         ? duration
         : Math.floor(((mouseX - progressBarX) / progressBarWidth) * duration);
-    console.log(
-      "mx:",
-      mouseX,
-      "pbx:",
-      progressBarX,
-      "pbw:",
-      progressBarWidth,
-      "time:",
-      time,
-      "per:",
-      [(time / duration) * 100]
-    );
     setProgress([(time / duration) * 100, time, duration]);
   };
 
@@ -216,18 +206,6 @@ function App() {
             : Math.floor(
                 ((mouseX - progressBarX) / progressBarWidth) * duration
               );
-        console.log(
-          "mx:",
-          mouseX,
-          "pbx:",
-          progressBarX,
-          "pbw:",
-          progressBarWidth,
-          "time:",
-          time,
-          "per:",
-          [(time / duration) * 100]
-        );
         setProgress([(time / duration) * 100, time, duration]);
       }
     };
@@ -248,21 +226,9 @@ function App() {
             : Math.floor(
                 ((mouseX - progressBarX) / progressBarWidth) * duration
               );
-        console.log(
-          "mx:",
-          mouseX,
-          "pbx:",
-          progressBarX,
-          "pbw:",
-          progressBarWidth,
-          "time:",
-          time,
-          "per:",
-          [(time / duration) * 100]
-        );
 
         invoke("seek_to", { time });
-        if (prevProgressRef.current[1] >= prevProgressRef.current[2]) {
+        if (isEndOfSong.current && statusRef.current !== "Running") {
           setStatus("Running");
           invoke("resume");
         }
@@ -297,7 +263,6 @@ function App() {
   }, [isDraggingProgressBar]);
 
   useEffect(() => {
-    prevProgressRef.current = progressRef.current;
     progressRef.current = progress;
   }, [progress]);
 

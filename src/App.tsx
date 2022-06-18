@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   IoPlaySharp,
   IoPlayForwardSharp,
@@ -10,20 +10,18 @@ import { open } from "@tauri-apps/api/dialog";
 import { invoke } from "@tauri-apps/api/tauri";
 
 type Progress = [number, number, number];
-
 type Status = "Running" | "Stopped" | "Paused";
-
 type Track = {
   file: string;
 };
 
-function formatTime(time: number) {
+const formatTime = (time: number) => {
   const min = Math.floor(time / 60);
   const sec = time % 60;
   return `${min}:${sec.toString().padStart(2, "0")}`;
-}
+};
 
-function App() {
+const App = () => {
   const divExcludingCoverRef = useRef<HTMLDivElement>(null);
   const divProgressBarRef = useRef<HTMLDivElement>(null);
   const [coverSize, setCoverSize] = useState(0);
@@ -31,7 +29,6 @@ function App() {
   const progressRef = useRef<Progress>(progress);
   const [isDraggingProgressBar, setIsDraggingProgressBar] = useState(false);
   const isDraggingProgressBarRef = useRef(isDraggingProgressBar);
-  const [isPaused, setIsPaused] = useState(true);
   const isRightAfterSeekRef = useRef(false);
   const isEndOfSong = useRef(false);
   const [playlistItems, setPlaylistItems] = useState<Track[]>([]);
@@ -40,8 +37,34 @@ function App() {
   const currentSongIndexRef = useRef(currentSongIndex);
   const [status, setStatus] = useState<Status>("Stopped");
   const statusRef = useRef<Status>(status);
-
   const requestIdRef = useRef(0);
+
+  const play = useCallback((path: String) => {
+    const _ = invoke("play", { path });
+    setStatus("Running");
+  }, []);
+
+  const pause = useCallback(() => {
+    const _ = invoke("pause");
+    setStatus("Paused");
+  }, []);
+
+  const resume = useCallback(() => {
+    const _ = invoke("resume");
+    setStatus("Running");
+  }, []);
+
+  const stop = useCallback(() => {
+    const _ = invoke("stop");
+  }, []);
+
+  const seekTo = useCallback((time: number) => {
+    const _ = invoke("seek_to", { time });
+  }, []);
+
+  const getIsPaused = useCallback(() => invoke("is_paused"), []);
+
+  const getProgress = useCallback(() => invoke("get_progress"), []);
 
   useEffect(() => {
     playlistItemsRef.current = playlistItems;
@@ -55,129 +78,18 @@ function App() {
     statusRef.current = status;
   }, [status]);
 
-  const playerNext = () => {
-    if (!playlistItemsRef.current.length) {
-      setCurrentSongIndex(0);
-      invoke("stop");
-      return;
-    }
+  useEffect(() => {
+    isDraggingProgressBarRef.current = isDraggingProgressBar;
+  }, [isDraggingProgressBar]);
 
-    setStatus("Running");
-    const newCurrentSongIndex =
-      currentSongIndexRef.current < playlistItemsRef.current.length - 1
-        ? currentSongIndexRef.current + 1
-        : 0;
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
-    const song = playlistItemsRef.current[newCurrentSongIndex];
-    invoke("play", { path: song.file });
-    setCurrentSongIndex(newCurrentSongIndex);
-  };
-
-  const playerPrevious = () => {
-    if (!playlistItemsRef.current.length) {
-      setCurrentSongIndex(0);
-      invoke("stop");
-      return;
-    }
-
-    setStatus("Running");
-    const newCurrentSongIndex =
-      progressRef.current[1] >= 3
-        ? currentSongIndexRef.current
-        : currentSongIndexRef.current > 0
-        ? currentSongIndexRef.current - 1
-        : playlistItemsRef.current.length - 1;
-
-    const song = playlistItemsRef.current[newCurrentSongIndex];
-    invoke("play", { path: song.file });
-    setCurrentSongIndex(newCurrentSongIndex);
-  };
-
-  const playerTogglePause = () => {
-    if (playlistItemsRef.current.length) {
-      invoke("is_paused").then((isPaused) => {
-        if (isPaused) {
-          setStatus("Running");
-          invoke("resume");
-        } else {
-          setStatus("Paused");
-          invoke("pause");
-        }
-      });
-    }
-  };
-
-  const progressUpdate = () => {
-    invoke("get_progress").then((progress) => {
-      const [_, timePos, duration] = progress as Progress;
-
-      if (timePos >= duration) {
-        isEndOfSong.current = true;
-        setStatus("Paused");
-        invoke("pause");
-        setProgress([(timePos / duration) * 100, timePos, duration]);
-        // playerNext();
-        return;
-      } else {
-        isEndOfSong.current = false;
-      }
-
-      setProgress([(timePos / duration) * 100, timePos, duration]);
-    });
-  };
-
-  const animate = () => {
-    if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
-      progressUpdate();
-    }
-
-    if (statusRef.current === "Stopped") {
-      playerNext();
-    }
-
-    requestIdRef.current = requestAnimationFrame(animate);
-  };
   useEffect(() => {
     requestIdRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestIdRef.current);
   }, []);
-
-  function openDialog() {
-    open().then((files) => {
-      if (files) {
-        // TODO: files type check
-        if (typeof files == "string") {
-          const newSong = { file: files };
-          const newPlaylistItems = [...playlistItems, newSong];
-          setPlaylistItems(newPlaylistItems);
-        } else {
-          const newSongs = files.map((file) => {
-            return { file };
-          });
-          const newPlaylistItems = [...playlistItems, ...newSongs];
-          setPlaylistItems(newPlaylistItems);
-        }
-      }
-    });
-  }
-
-  const handleMouseDownProgressBar = (
-    event: React.MouseEvent<HTMLDivElement>
-  ) => {
-    setIsDraggingProgressBar(true);
-
-    const mouseX = event.clientX;
-    const { x: progressBarX, width: progressBarWidth } =
-      event.currentTarget.getBoundingClientRect();
-    const duration = progress[2];
-    const time =
-      mouseX <= progressBarX
-        ? 0
-        : mouseX >= progressBarX + progressBarWidth
-        ? duration
-        : Math.floor(((mouseX - progressBarX) / progressBarWidth) * duration);
-    setProgress([(time / duration) * 100, time, duration]);
-  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -227,10 +139,9 @@ function App() {
                 ((mouseX - progressBarX) / progressBarWidth) * duration
               );
 
-        invoke("seek_to", { time });
+        seekTo(time);
         if (isEndOfSong.current && statusRef.current !== "Running") {
-          setStatus("Running");
-          invoke("resume");
+          resume();
         }
         setProgress([(time / duration) * 100, time, duration]);
 
@@ -258,13 +169,114 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    isDraggingProgressBarRef.current = isDraggingProgressBar;
-  }, [isDraggingProgressBar]);
+  const playerNext = () => {
+    if (!playlistItemsRef.current.length) {
+      stop();
+      setCurrentSongIndex(0);
+      return;
+    }
 
-  useEffect(() => {
-    progressRef.current = progress;
-  }, [progress]);
+    const newCurrentSongIndex =
+      currentSongIndexRef.current < playlistItemsRef.current.length - 1
+        ? currentSongIndexRef.current + 1
+        : 0;
+
+    const song = playlistItemsRef.current[newCurrentSongIndex];
+    play(song.file);
+    setCurrentSongIndex(newCurrentSongIndex);
+  };
+
+  const playerPrevious = () => {
+    if (!playlistItemsRef.current.length) {
+      stop();
+      setCurrentSongIndex(0);
+      return;
+    }
+
+    const newCurrentSongIndex =
+      progressRef.current[1] >= 3
+        ? currentSongIndexRef.current
+        : currentSongIndexRef.current > 0
+        ? currentSongIndexRef.current - 1
+        : playlistItemsRef.current.length - 1;
+
+    const song = playlistItemsRef.current[newCurrentSongIndex];
+    play(song.file);
+    setCurrentSongIndex(newCurrentSongIndex);
+  };
+
+  const playerTogglePause = () => {
+    if (playlistItemsRef.current.length) {
+      getIsPaused().then((isPaused) => (isPaused ? resume() : pause()));
+    }
+  };
+
+  const progressUpdate = () => {
+    getProgress()
+      .then((progress) => {
+        const [_, timePos, duration] = progress as Progress;
+
+        if (timePos >= duration) {
+          pause();
+          isEndOfSong.current = true;
+          setProgress([(timePos / duration) * 100, timePos, duration]);
+          // playerNext();
+        } else {
+          isEndOfSong.current = false;
+          setProgress([(timePos / duration) * 100, timePos, duration]);
+        }
+      })
+      .catch();
+  };
+
+  const animate = () => {
+    if (!isDraggingProgressBarRef.current && !isRightAfterSeekRef.current) {
+      progressUpdate();
+    }
+
+    if (statusRef.current === "Stopped") {
+      playerNext();
+    }
+
+    requestIdRef.current = requestAnimationFrame(animate);
+  };
+
+  const openDialog = () => {
+    open().then((files) => {
+      if (files) {
+        // TODO: files type check
+        if (typeof files == "string") {
+          const newSong = { file: files };
+          const newPlaylistItems = [...playlistItems, newSong];
+          setPlaylistItems(newPlaylistItems);
+        } else {
+          const newSongs = files.map((file) => {
+            return { file };
+          });
+          const newPlaylistItems = [...playlistItems, ...newSongs];
+          setPlaylistItems(newPlaylistItems);
+        }
+      }
+    });
+  };
+
+  const handleMouseDownProgressBar = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    setIsDraggingProgressBar(true);
+
+    const mouseX = event.clientX;
+    const { x: progressBarX, width: progressBarWidth } =
+      event.currentTarget.getBoundingClientRect();
+    const duration = progress[2];
+    const time =
+      mouseX <= progressBarX
+        ? 0
+        : mouseX >= progressBarX + progressBarWidth
+        ? duration
+        : Math.floor(((mouseX - progressBarX) / progressBarWidth) * duration);
+    setProgress([(time / duration) * 100, time, duration]);
+  };
 
   return (
     <div className="relative">
@@ -351,6 +363,6 @@ function App() {
       </div>
     </div>
   );
-}
+};
 
 export default App;

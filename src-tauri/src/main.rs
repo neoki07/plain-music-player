@@ -63,10 +63,8 @@ impl<R: Runtime> WindowExt for Window<R> {
 }
 
 #[tauri::command]
-fn play(path: &str, player: State<PlayerState>) -> Result<(), String> {
-    println!("path: {:?}", path);
+fn play(path: &str, player: State<PlayerState>) {
     player.0.lock().unwrap().play(Path::new(path));
-    Ok(())
 }
 
 #[tauri::command]

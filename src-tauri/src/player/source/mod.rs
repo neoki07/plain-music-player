@@ -124,6 +124,14 @@ where
 
     fn elapsed(&mut self) -> Duration;
 
+    fn fade_in_from_now(&mut self, duration: Duration) {
+        unimplemented!()
+    }
+
+    fn fade_out_from_now(&mut self, duration: Duration) {
+        unimplemented!()
+    }
+
     /// Takes a certain duration of this source and then stops.
     #[inline]
     fn take_duration(self, duration: Duration) -> TakeDuration<Self>

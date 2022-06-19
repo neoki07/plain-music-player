@@ -1,4 +1,9 @@
 use super::Source;
+use crate::player::source::{
+    Amplify, FadeIn, Pausable, PeriodicAccess, SamplesConverter, Speed, Stoppable, TakeDuration,
+};
+use crate::player::Sample;
+use std::cmp::max;
 use std::{fmt, fs::File, time::Duration};
 use symphonia::{
     core::{
@@ -13,6 +18,7 @@ use symphonia::{
     },
     default::get_probe,
 };
+
 // Decoder errors are not considered fatal.
 // The correct action is to just get a new packet and try again.
 // But a decode error in more than 3 consecutive packets is fatal.
@@ -26,6 +32,12 @@ pub struct Symphonia {
     spec: SignalSpec,
     duration: Duration,
     elapsed: Duration,
+    fade_in_remaining_ns: f32,
+    fade_in_total_ns: f32,
+    fade_out_remaining_ns: f32,
+    fade_out_total_ns: f32,
+    is_seeking_soon: bool,
+    seek_to_time: Duration,
 }
 
 impl Symphonia {
@@ -104,6 +116,12 @@ impl Symphonia {
             spec,
             duration,
             elapsed: Duration::from_secs(0),
+            fade_in_remaining_ns: 0.0,
+            fade_in_total_ns: 0.0,
+            fade_out_remaining_ns: 0.0,
+            fade_out_total_ns: 0.0,
+            is_seeking_soon: false,
+            seek_to_time: Duration::from_secs(0),
         }))
     }
 
@@ -176,28 +194,29 @@ impl Source for Symphonia {
     }
 
     #[inline]
+    fn fade_in_from_now(&mut self, duration: Duration) {
+        let duration = duration.as_secs() * 1_000_000_000 + u64::from(duration.subsec_nanos());
+
+        self.fade_in_remaining_ns = duration as f32;
+        self.fade_in_total_ns = duration as f32;
+    }
+
+    #[inline]
+    fn fade_out_from_now(&mut self, duration: Duration) {
+        let duration = duration.as_secs() * 1_000_000_000 + u64::from(duration.subsec_nanos());
+
+        self.fade_out_remaining_ns = duration as f32;
+        self.fade_out_total_ns = duration as f32;
+    }
+
+    #[inline]
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     fn seek(&mut self, time: Duration) -> Option<Duration> {
-        match self.format.seek(
-            SeekMode::Coarse,
-            // Symphonia seems to seek about 0.05s before the specified second (not earlier than 0.05s).
-            // Then, at the moment of seek, the time 1 second earlier is displayed on the UI.
-            // To solve this problem, seek to the time that adds 0.05s.
-            SeekTo::Time {
-                time: Time::new(time.as_secs(), 0.05),
-                track_id: None,
-            },
-        ) {
-            Ok(seeked_to) => {
-                let base = TimeBase::new(1, self.sample_rate());
-                let time = base.calc_time(seeked_to.actual_ts);
-                let duration =
-                    Duration::from_secs(time.seconds) + Duration::from_secs_f64(time.frac);
-                self.elapsed = duration;
-                Some(duration)
-            }
-            Err(_) => None,
-        }
+        // Suppresses noise at the moment of seek.
+        self.fade_out_from_now(Duration::from_millis(10));
+        self.is_seeking_soon = true;
+        self.seek_to_time = time;
+        Some(Duration::from_secs(0))
     }
 }
 
@@ -240,8 +259,62 @@ impl Iterator for Symphonia {
             self.current_frame_offset = 0;
         }
 
-        let sample = self.buffer.samples()[self.current_frame_offset];
+        let mut sample = self.buffer.samples()[self.current_frame_offset];
         self.current_frame_offset += 1;
+
+        if self.fade_out_remaining_ns > 0.0 {
+            let fade_out_factor =
+                (self.fade_out_remaining_ns / self.fade_out_total_ns * 2.0 - 1.0).max(0.0);
+            println!(
+                "fade_out_remaining_ns: {:?}, fade_out_factor: {:?}",
+                self.fade_out_remaining_ns, fade_out_factor
+            );
+
+            self.fade_out_remaining_ns -=
+                1_000_000_000.0 / (self.sample_rate() as f32 * f32::from(self.channels()));
+
+            sample = (sample as f32 * fade_out_factor) as i16;
+        } else if self.is_seeking_soon {
+            match self.format.seek(
+                SeekMode::Coarse,
+                // Symphonia seems to seek about 0.05s before the specified second (not earlier than 0.05s).
+                // Then, at the moment of seek, the time 1 second earlier is displayed on the UI.
+                // To solve this problem, seek to the time that adds 0.05s.
+                SeekTo::Time {
+                    time: Time::new(self.seek_to_time.as_secs(), 0.05),
+                    track_id: None,
+                },
+            ) {
+                Ok(seeked_to) => {
+                    let base = TimeBase::new(1, self.sample_rate());
+                    let time = base.calc_time(seeked_to.actual_ts);
+                    let duration =
+                        Duration::from_secs(time.seconds) + Duration::from_secs_f64(time.frac);
+                    self.elapsed = duration;
+
+                    // Suppresses noise at the moment of seek.
+                    self.fade_in_from_now(Duration::from_millis(100));
+                    // Some(duration)
+                }
+                Err(_) => {}
+            }
+
+            self.is_seeking_soon = false;
+        }
+
+        if self.fade_in_remaining_ns > 0.0 {
+            let fade_in_factor =
+                ((1.0 - self.fade_in_remaining_ns / self.fade_in_total_ns) * 2.0 - 1.0).max(0.0);
+            println!(
+                "fade_in_remaining_ns: {:?}, fade_in_factor: {:?}",
+                self.fade_in_remaining_ns, fade_in_factor
+            );
+
+            self.fade_in_remaining_ns -=
+                1_000_000_000.0 / (self.sample_rate() as f32 * f32::from(self.channels()));
+
+            sample = (sample as f32 * fade_in_factor) as i16;
+        }
 
         Some(sample)
     }

@@ -4,8 +4,10 @@
 )]
 
 mod player;
+mod track;
 
 use crate::player::PlayerError;
+use crate::track::Track;
 use anyhow::Result;
 use cocoa::appkit::{NSWindow, NSWindowStyleMask, NSWindowTitleVisibility};
 use player::Player;
@@ -97,6 +99,11 @@ fn get_progress(player: State<PlayerState>) -> Result<(f64, i64, i64), PlayerErr
     player.0.lock().unwrap().get_progress()
 }
 
+#[tauri::command]
+fn read_track_from_path(path: String) -> Track {
+    Track::read_from_path(path).unwrap()
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -111,7 +118,8 @@ fn main() {
             is_paused,
             stop,
             seek_to,
-            get_progress
+            get_progress,
+            read_track_from_path
         ])
         .manage(PlayerState(Mutex::new(Player::new())))
         .run(tauri::generate_context!())

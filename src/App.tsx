@@ -11,8 +11,18 @@ import { invoke } from "@tauri-apps/api/tauri";
 
 type Progress = [number, number, number];
 type Status = "Running" | "Stopped" | "Paused";
+type TauriTrack = {
+  file: string | undefined;
+  name: string | undefined;
+  title: string | undefined;
+  artist: string | undefined;
+};
+
 type Track = {
   file: string;
+  name: string;
+  title: string;
+  artist: string;
 };
 
 const formatTime = (time: number) => {
@@ -251,12 +261,20 @@ const App = () => {
       if (files) {
         // TODO: files type check
         if (typeof files == "string") {
-          const newSong = { file: files };
-          const newPlaylistItems = [...playlistItems, newSong];
-          setPlaylistItems(newPlaylistItems);
+          invoke("read_track_from_path", { path: files }).then((track) => {
+            const { file, name, title, artist } = track as TauriTrack;
+            const newSong: Track = {
+              file: file ?? "",
+              name: name ?? "-",
+              title: title ?? "-",
+              artist: artist ?? "-",
+            };
+            const newPlaylistItems = [...playlistItems, newSong];
+            setPlaylistItems(newPlaylistItems);
+          });
         } else {
           const newSongs = files.map((file) => {
-            return { file };
+            return { file, name: "", title: "Title", artist: "Artist" };
           });
           const newPlaylistItems = [...playlistItems, ...newSongs];
           setPlaylistItems(newPlaylistItems);
@@ -304,11 +322,16 @@ const App = () => {
         <div ref={divExcludingCoverRef}>
           <div className="flex justify-center items-center">
             <div className="break-all mx-8 font-bold flex text-3xl text-gray-100 justify-center items-center">
-              MONTERO (Call Me By Your Name)
+              {playlistItems.length
+                ? playlistItems[currentSongIndex].title ??
+                  playlistItems[currentSongIndex].name
+                : "-"}
             </div>
           </div>
           <div className="break-all mx-8 mb-4 flex text-lg text-gray-500 justify-center items-center">
-            Lil Nas X
+            {playlistItems.length
+              ? playlistItems[currentSongIndex].artist
+              : "-"}
           </div>
           <div className="mx-8">
             <div className="group relative w-full ">

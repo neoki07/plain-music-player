@@ -82,6 +82,7 @@ dependencies = [
  "anyhow",
  "cocoa",
  "cpal",
+ "lofty",
  "serde",
  "serde_json",
  "symphonia",
@@ -1505,6 +1506,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lofty"
+version = "0.6.3"
+source = "git+https://github.com/Serial-ATA/lofty-rs#03276db157c652be4bff74a879e3ab18d5ff3fae"
+dependencies = [
+ "base64",
+ "byteorder",
+ "cfg-if",
+ "flate2",
+ "ogg_pager",
+ "once_cell",
+ "paste",
+]
+
+[[package]]
 name = "log"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1896,6 +1911,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3370abb7372ed744232c12954d920d1a40f1c4686de9e79e800021ef492294bd"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "ogg_pager"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a846c4c0578b95d4568e6f48210dd6045e7a9572af2b020062d06b6dea049f4"
+dependencies = [
+ "byteorder",
 ]
 
 [[package]]

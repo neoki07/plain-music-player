@@ -71,13 +71,15 @@ impl Sink {
 
     /// Appends a sound to the queue of sounds to play.
     #[inline]
-    pub fn append<S>(&self, source: S)
+    pub fn append<S>(&self, mut source: S)
     where
         S: Source + Send + 'static,
         S::Item: Sample + Send,
         // S::Item: Send,
     {
         println!("append now!!!");
+        source.fade_in_from_now(Duration::from_micros(100));
+
         let controls = self.controls.clone();
 
         let elapsed = self.elapsed.clone();

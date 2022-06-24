@@ -58,10 +58,10 @@
         "fullscreen": false,
         "resizable": true,
         "title": "Plain Music Player",
-        "width": 320,
-        "height": 480,
-        "minWidth": 320,
-        "minHeight": 480
+        "width": 352,
+        "height": 112,
+        "minWidth": 352,
+        "minHeight": 112
       }
     ]
   }
